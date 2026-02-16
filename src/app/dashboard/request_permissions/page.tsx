@@ -1,7 +1,9 @@
 "use client";
 
+import { PermissionsContainer } from "@dms/containers";
+
 const RequestPermissionsPage = () => {
-  return <div>Hallo</div>;
+  return <PermissionsContainer />;
 };
 
 export default RequestPermissionsPage;

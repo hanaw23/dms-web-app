@@ -78,6 +78,15 @@ export default function LoginContainer() {
           <Button type="submit" label={isLoading ? "Logging in..." : "Login"} icon={isLoading ? "pi pi-spin pi-spinner" : "pi pi-sign-in"} loading={isLoading} className="w-full mt-4" />
         </form>
       </Card>
+
+      <div className="mt-4">
+        <p className="text-sm">
+          Still not have account?{" "}
+          <a href={`/${PageNames.register_page}`} className="text-blue-500 hover:underline">
+            Register here
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

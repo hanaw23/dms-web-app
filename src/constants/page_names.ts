@@ -4,6 +4,7 @@ enum PageNames {
   documents_page = "dashboard/documents",
   create_document_page = "dashboard/documents/create",
   update_document_page = "dashboard/documents/update",
+  request_permission_page = "dashboard/request_permissions",
 }
 
 export { PageNames };

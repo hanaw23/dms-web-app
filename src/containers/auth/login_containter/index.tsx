@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { PageNames } from "@dms/constants";
 import { usePostLoginMutation } from "@dms/services/auth_services";
+import { useAuth } from "@dms/context";
 import { Card } from "primereact/card";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
@@ -14,6 +15,7 @@ import { Toast } from "primereact/toast";
 export default function LoginContainer() {
   const router = useRouter();
   const toast = useRef<Toast>(null);
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [postLogin, { isLoading, error }] = usePostLoginMutation();
@@ -30,6 +32,7 @@ export default function LoginContainer() {
         localStorage.setItem("accessToken", accessToken);
 
         if (user) {
+          login(user, accessToken);
           localStorage.setItem("user", JSON.stringify(user));
         }
       }

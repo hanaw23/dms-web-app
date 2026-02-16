@@ -1,3 +1,5 @@
-// import SearchInputComponent from "./inputs/search_input";
+import UploadFormsComponent from "./forms/upload_forms";
+import Sidebar from "./sidebars/sidebars";
+import MainLayout from "./layouts/main_layout";
 
-// export { SearchInputComponent };
+export { UploadFormsComponent, Sidebar, MainLayout };

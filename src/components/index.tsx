@@ -1,3 +1,3 @@
-// import SearchInputComponent from "./inputs/search_input";
+import UploadFormsComponent from "./forms/upload_forms";
 
-// export { SearchInputComponent };
+export { UploadFormsComponent };

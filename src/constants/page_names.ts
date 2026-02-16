@@ -1,7 +1,9 @@
 enum PageNames {
   login_page = "dashboard/auth/login",
   register_page = "dashboard/auth/register",
-  files_page = "dashboard/files",
+  documents_page = "dashboard/documents",
+  create_document_page = "dashboard/documents/create",
+  update_document_page = "dashboard/documents/update",
 }
 
 export { PageNames };

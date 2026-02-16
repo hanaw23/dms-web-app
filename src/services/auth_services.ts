@@ -1,10 +1,8 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { api_url } from "@dms/constants";
-import { helpers } from "@dms/utils";
 
 const { AUTH_URL_PATH, BASE_URL } = api_url;
-const { setParams } = helpers;
 
 const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
   const baseQuery = fetchBaseQuery({
@@ -62,7 +60,6 @@ export const authServices = createApi({
         const searchParams = new URLSearchParams();
 
         if (params) {
-          // Loop semua params yang ada valuenya
           Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== "") {
               searchParams.append(key, String(value));
@@ -83,7 +80,6 @@ export const authServices = createApi({
     // Logout (client-side only, tanpa API call)
     logout: builder.mutation<void, void>({
       queryFn: () => {
-        // Hapus token dari localStorage
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         return { data: undefined };

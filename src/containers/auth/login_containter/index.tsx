@@ -42,7 +42,7 @@ export default function LoginContainer() {
       });
 
       setTimeout(() => {
-        router.push(`/${PageNames.files_page}`);
+        router.push(`/${PageNames.documents_page}`);
       }, 1000);
     } catch (err) {
       toast.current?.show({
@@ -55,7 +55,7 @@ export default function LoginContainer() {
   };
 
   return (
-    <div className="flex  flex-col align-items-center justify-content-center min-h-screen">
+    <div className="flex flex-col align-items-center justify-content-center min-h-screen">
       <Toast ref={toast} />
       <Card title="Welcome to DMS Web App" className="w-full md:w-4 lg:w-3 text-center" style={{ maxWidth: "400px" }}>
         <form onSubmit={handleSubmit} className="flex flex-column gap-3">

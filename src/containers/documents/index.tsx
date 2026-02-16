@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useRef, useMemo } from "react";
 import dayjs from "dayjs";
-import { useGetAllDocumentsQuery, useDeleteDocumentMutation } from "@dms/services/document_services";
+import { useGetAllDocumentsQuery, useDeleteDocumentMutation, usePatchUpdateDocumentStatusMutation } from "@dms/services/document_services";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
@@ -11,6 +11,7 @@ import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
 import { Tag } from "primereact/tag";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
+import { Dropdown } from "primereact/dropdown";
 import { Toolbar } from "primereact/toolbar";
 import { helpers } from "@dms/utils";
 import { PageNames } from "@dms/constants";
@@ -22,6 +23,7 @@ export default function DocumentsContainer() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [permissionType, setPermissionType] = useState<string | null>(null);
 
   // Debounced search function
   const debouncedSearch = useMemo(
@@ -50,20 +52,12 @@ export default function DocumentsContainer() {
   // Delete mutation
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
 
+  // Update status document mutation
+  const [patchUpdateDocumentStatus, { isLoading: isUpdatingStatus }] = usePatchUpdateDocumentStatusMutation();
+
   // Status badge template
   const statusBodyTemplate = (rowData: Document) => {
     return <Tag value={helpers.getStatus(rowData.status)} severity={helpers.getSeverity(rowData.status)} />;
-  };
-
-  // Date format template
-  const dateBodyTemplate = (rowData: Document, field: "created_at" | "updated_at") => {
-    return new Date(rowData[field]).toLocaleString("id-ID", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   // User template
@@ -119,18 +113,100 @@ export default function DocumentsContainer() {
       });
     };
 
+    const permissionOptions = [
+      { label: "Replace Document", value: "replace" },
+      { label: "Remove Document", value: "remove" },
+    ].filter((option) => {
+      if (option.value === "replace" && rowData.is_replace_permission) {
+        return false;
+      }
+      if (option.value === "remove" && rowData.is_remove_permission) {
+        return false;
+      }
+      return true;
+    });
+
+    const handleRequestPermission = () => {
+      confirmDialog({
+        message: (
+          <div className="flex flex-column gap-3">
+            <p>Select permission type you want to request:</p>
+            <Dropdown value={permissionType} onChange={(e) => setPermissionType(e.value)} options={permissionOptions} placeholder="Select permission type" className="w-full" />
+          </div>
+        ),
+        header: "Request Permission",
+        accept: async () => {
+          if (!permissionType) {
+            toast.current?.show({
+              severity: "warn",
+              summary: "Warning",
+              detail: "Please select permission type",
+              life: 3000,
+            });
+            return;
+          }
+
+          try {
+            let newStatus = "";
+            if (isUpdatingStatus === "replace") {
+              newStatus = "pending_replace";
+            } else if (isUpdatingStatus === "remove") {
+              newStatus = "pending_remove";
+            }
+
+            await patchUpdateDocumentStatus({
+              id: rowData.id,
+              body: {
+                status: newStatus,
+              },
+            }).unwrap();
+            toast.current?.show({
+              severity: "success",
+              summary: "Success",
+              detail: `Permission request for ${permissionType} submitted successfully`,
+              life: 3000,
+            });
+            refetch();
+            setPermissionType(null);
+          } catch (error) {
+            toast.current?.show({
+              severity: "error",
+              summary: "Error",
+              detail: "Failed to submit permission request",
+              life: 3000,
+            });
+          }
+        },
+        reject: () => {
+          setPermissionType(null);
+        },
+      });
+    };
+
     return (
       <div className="flex gap-2">
-        <Button icon="pi pi-eye" className="p-button-sm" severity="info" tooltip="View" tooltipOptions={{ position: "top" }} onClick={() => window.open(rowData.url_doc, "_blank")} />
+        <Button icon="pi pi-eye" className="p-button-sm" severity="info" tooltip="View" tooltipOptions={{ position: "top" }} onClick={() => redirectPage("view", rowData.id)} />
         <Button icon="pi pi-pencil" className="p-button-sm" severity="warning" tooltip="Edit" tooltipOptions={{ position: "top" }} onClick={() => redirectPage("update", rowData.id)} disabled={!rowData.is_replace_permission} />
-        <Button icon="pi pi-trash" className="p-button-sm" severity="danger" tooltip="Delete" tooltipOptions={{ position: "top" }} onClick={handleDelete} disabled={!rowData.is_remove_permission || isDeleting} />
+        <Button icon="pi pi-trash" className="p-button-sm" severity="danger" tooltip="Delete" tooltipOptions={{ position: "top" }} onClick={handleDelete} disabled={!rowData.is_remove_permission || isDeleting} loading={isDeleting} />
+        <Button
+          icon="pi pi-user-edit"
+          className="p-button-sm"
+          severity="secondary"
+          tooltip="Request Permission"
+          tooltipOptions={{ position: "top" }}
+          onClick={handleRequestPermission}
+          disabled={rowData.is_remove_permission && rowData.is_replace_permission}
+          loading={isUpdatingStatus}
+        />
       </div>
     );
   };
 
-  const redirectPage = (action: "create" | "update", id?: string) => {
+  const redirectPage = (action: "create" | "update" | "view", id?: string) => {
     if (action === "create") {
       router.push(`/${PageNames.create_document_page}`);
+    } else if (action === "view") {
+      router.push(`/${PageNames.update_document_page}/?id=${id}&view=view`);
     } else {
       router.push(`/${PageNames.update_document_page}/?id=${id}`);
     }

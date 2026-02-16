@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import { PageNames } from "@dms/constants";
 import { useGetDocumentByIdQuery, usePatchUpdateDocumentMutation, usePatchUpdateDocumentStatusMutation } from "@dms/services/document_services";
+import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Message } from "primereact/message";
@@ -17,6 +18,8 @@ export default function UpdateDocumentContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const documentId = searchParams.get("id") || "";
+  const documentMode = searchParams.get("view");
+  const is_update_mode = documentMode !== "view";
 
   // Fetch document data
   const { data: documentData, isLoading: isFetching, error: fetchError } = useGetDocumentByIdQuery(documentId);
@@ -149,10 +152,19 @@ export default function UpdateDocumentContainer() {
         </div>
       </div>
 
+      {/* Action Buttons */}
+      {!is_update_mode && (
+        <div className="flex gap-2 justify-content-end">
+          <Button type="button" label="Back" severity="secondary" onClick={handleCancel} />
+        </div>
+      )}
+
       {/* Update Form */}
-      <div className="mx-auto">
-        <UploadFormsComponent mode="update" initialName={document.name_doc} doc_url={document.url_doc} onSubmit={handleSubmit} isLoading={isSubmitLoading} onCancel={handleCancel} />
-      </div>
+      {is_update_mode && (
+        <div className="mx-auto">
+          <UploadFormsComponent mode="update" initialName={document.name_doc} doc_url={document.url_doc} onSubmit={handleSubmit} isLoading={isSubmitLoading} onCancel={handleCancel} />
+        </div>
+      )}
     </div>
   );
 }

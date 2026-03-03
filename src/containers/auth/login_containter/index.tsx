@@ -66,14 +66,33 @@ export default function LoginContainer() {
             <label htmlFor="username" className="font-semibold text-left">
               Username
             </label>
-            <InputText id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter username" required />
+            <InputText id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter username" required className="w-full" />
           </div>
 
           <div className="flex flex-column gap-2 w-full">
             <label htmlFor="password" className="font-semibold text-left">
               Password
             </label>
-            <Password id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" feedback={false} toggleMask required />
+            <Password
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              feedback={false}
+              toggleMask
+              required
+              className="w-full"
+              inputClassName="w-full"
+              style={{ width: "100%" }}
+              inputStyle={{ width: "100%" }}
+              pt={{
+                root: { style: { width: "100%" } },
+                input: { style: { width: "100%" } },
+                iconField: {
+                  root: { className: "w-full" },
+                },
+              }}
+            />
           </div>
 
           {error && <Message severity="error" text="Login failed. Please check your credentials." />}
@@ -85,7 +104,7 @@ export default function LoginContainer() {
       <div className="mt-4">
         <p className="text-sm">
           Still not have account?{" "}
-          <a href={`/${PageNames.register_page}`} className="text-blue-500 hover:underline">
+          <a href={`/${PageNames.register_page}`} className="text-blue-500! hover:underline! cursor-pointer">
             Register here
           </a>
         </p>

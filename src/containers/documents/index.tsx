@@ -19,6 +19,8 @@ import { PageNames } from "@dms/constants";
 export default function DocumentsContainer() {
   const router = useRouter();
   const toast = useRef<Toast>(null);
+  const user = localStorage.getItem("user");
+  const role_user = JSON.parse(user)?.role;
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -44,7 +46,7 @@ export default function DocumentsContainer() {
 
   // Fetch documents
   const { data, isLoading, isFetching, refetch } = useGetAllDocumentsQuery({
-    q: search,
+    search,
     page,
     limit,
   });
@@ -72,16 +74,11 @@ export default function DocumentsContainer() {
 
   // Document name with link template
   const nameBodyTemplate = (rowData: Document) => {
-    return (
-      <div className="flex align-items-center gap-2">
-        <i className="pi pi-file text-xl"></i>
-        <div>
-          <a href={rowData.url_doc} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">
-            {rowData.name_doc}
-          </a>
-        </div>
-      </div>
-    );
+    return <div className="font-semibold text-primary">{rowData.name_doc}</div>;
+  };
+
+  const TimeTemplate = (date: string | Date) => {
+    return <div className="font-semibold text-primary text-sm">{dayjs(date).format("DD MMM YYYY, hh:mm A")}</div>;
   };
 
   // Actions template
@@ -188,16 +185,18 @@ export default function DocumentsContainer() {
         <Button icon="pi pi-eye" className="p-button-sm" severity="info" tooltip="View" tooltipOptions={{ position: "top" }} onClick={() => redirectPage("view", rowData.id)} />
         <Button icon="pi pi-pencil" className="p-button-sm" severity="warning" tooltip="Edit" tooltipOptions={{ position: "top" }} onClick={() => redirectPage("update", rowData.id)} disabled={!rowData.is_replace_permission} />
         <Button icon="pi pi-trash" className="p-button-sm" severity="danger" tooltip="Delete" tooltipOptions={{ position: "top" }} onClick={handleDelete} disabled={!rowData.is_remove_permission || isDeleting} loading={isDeleting} />
-        <Button
-          icon="pi pi-user-edit"
-          className="p-button-sm"
-          severity="secondary"
-          tooltip="Request Permission"
-          tooltipOptions={{ position: "top" }}
-          onClick={handleRequestPermission}
-          disabled={rowData.is_remove_permission && rowData.is_replace_permission}
-          loading={isUpdatingStatus}
-        />
+        {role_user === "ADMIN" ? null : (
+          <Button
+            icon="pi pi-user-edit"
+            className="p-button-sm"
+            severity="secondary"
+            tooltip="Request Permission"
+            tooltipOptions={{ position: "top" }}
+            onClick={handleRequestPermission}
+            disabled={rowData.is_remove_permission && rowData.is_replace_permission}
+            loading={isUpdatingStatus}
+          />
+        )}
       </div>
     );
   };
@@ -225,18 +224,7 @@ export default function DocumentsContainer() {
   const rightToolbarTemplate = () => {
     return (
       <div className="flex align-items-center gap-2">
-        <span className="p-input-icon-left p-input-icon-right">
-          <InputText value={searchInput} onChange={handleSearchChange} placeholder="Search documents..." className="w-full" />
-          {searchInput && (
-            <i
-              className="pi pi-times cursor-pointer"
-              onClick={() => {
-                setSearchInput("");
-                debouncedSearch("");
-              }}
-            />
-          )}
-        </span>
+        <InputText value={searchInput} onChange={handleSearchChange} placeholder="Search documents..." className="w-full" />
       </div>
     );
   };
@@ -247,7 +235,6 @@ export default function DocumentsContainer() {
       <ConfirmDialog />
 
       <h1 className="text-3xl font-bold mb-4">Your Documents</h1>
-
       <Toolbar className="mb-4" start={leftToolbarTemplate} end={rightToolbarTemplate} />
 
       <DataTable
@@ -271,11 +258,11 @@ export default function DocumentsContainer() {
         showGridlines
       >
         <Column field="id" header="ID" sortable style={{ width: "80px" }} />
-        <Column field="name_doc" header="Document" body={nameBodyTemplate} sortable style={{ minWidth: "300px" }} />
+        <Column field="name_doc" header="Document" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
         <Column field="status" header="Status" body={statusBodyTemplate} sortable style={{ width: "150px" }} />
         <Column field="user" header="Uploaded By" body={userBodyTemplate} style={{ minWidth: "200px" }} />
-        <Column field="created_at" header="Created At" body={(rowData) => dayjs(rowData.created_at).format("DD MMM YYYY, hh:mm A")} sortable style={{ width: "200px" }} />
-        <Column field="updated_at" header="Updated At" body={(rowData) => dayjs(rowData.updated_at).format("DD MMM YYYY, hh:mm A")} sortable style={{ width: "200px" }} />
+        <Column field="created_at" header="Created At" body={(rowData) => TimeTemplate(rowData.created_at)} sortable style={{ width: "300px" }} />
+        <Column field="updated_at" header="Updated At" body={(rowData) => TimeTemplate(rowData.updated_at)} sortable style={{ width: "300px" }} />
         <Column header="Actions" body={actionsBodyTemplate} style={{ width: "180px" }} frozen alignFrozen="right" />
       </DataTable>
     </div>

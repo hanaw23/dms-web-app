@@ -77,11 +77,30 @@ export default function RegisterContainer() {
             <InputText id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter username" required />
           </div>
 
-          <div className="flex flex-column gap-2 w-full">
+          <div className="flex flex-column gap-2 w-full text-left placeholder:text-left">
             <label htmlFor="password" className="font-semibold text-left">
               Password
             </label>
-            <Password id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" feedback={false} toggleMask required />
+            <Password
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              feedback={false}
+              toggleMask
+              required
+              className="w-full"
+              inputClassName="w-full"
+              style={{ width: "100%" }}
+              inputStyle={{ width: "100%" }}
+              pt={{
+                root: { style: { width: "100%" } },
+                input: { style: { width: "100%" } },
+                iconField: {
+                  root: { className: "w-full" },
+                },
+              }}
+            />
           </div>
 
           <div className="flex flex-column gap-2 w-full">
@@ -94,9 +113,12 @@ export default function RegisterContainer() {
               options={optionRole}
               optionLabel="label"
               placeholder="Select user role"
-              className="w-full md:w-14rem"
+              className="w-full"
               checkmark={true}
               highlightOnSelect={false}
+              pt={{
+                input: { style: { textAlign: "left" } },
+              }}
             />
           </div>
 
@@ -108,7 +130,7 @@ export default function RegisterContainer() {
       <div className="mt-4">
         <p className="text-sm">
           Already have account?{" "}
-          <a href={`/${PageNames.login_page}`} className="text-blue-500 hover:underline">
+          <a href={`/${PageNames.login_page}`} className="text-blue-500! hover:underline! cursor-pointer">
             Login here
           </a>
         </p>

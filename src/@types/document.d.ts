@@ -8,6 +8,14 @@ enum DocumentStatusEnum {
   REJECTED_REMOVE = "rejected_remove",
 }
 
+interface DocumentFile {
+  id: number;
+  url_doc: string;
+  filename: string;
+  created_at: string;
+  document_id: number;
+}
+
 interface CreateDocumentRequest {
   name_doc: string;
 }
@@ -29,7 +37,7 @@ interface UserInDocument {
 interface Document {
   id: number;
   name_doc: string;
-  url_doc: string;
+  files: DocumentFile[];
   status: DocumentStatus;
   is_remove_permission: boolean;
   is_replace_permission: boolean;

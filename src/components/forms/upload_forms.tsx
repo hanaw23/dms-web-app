@@ -3,33 +3,43 @@
 import { useState, useRef, useEffect } from "react";
 import { InputText } from "primereact/inputtext";
 import { FileUpload, FileUploadHandlerEvent } from "primereact/fileupload";
+import { helpers } from "@dms/utils";
 import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
 import { Card } from "primereact/card";
 
 interface UploadFormProps {
-  mode?: "create" | "update";
-  initialName?: string;
-  doc_url?: string;
+  mode: "create" | "update" | "view";
+  initialName: string;
+  initialFiles: DocumentFile[];
   onSubmit: (formData: FormData) => Promise<void>;
   isLoading?: boolean;
   onCancel?: () => void;
 }
 
-const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "", onSubmit, isLoading = false, onCancel }: UploadFormProps) => {
+const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles = [], onSubmit, isLoading = false, onCancel }: UploadFormProps) => {
   const toast = useRef<Toast>(null);
+  const hasConverted = useRef(false);
   const fileUploadRef = useRef<FileUpload>(null);
   const [name, setName] = useState(initialName);
   const [countFiles, setCountFiles]: number = useState(0);
-  const [files, setFiles]: string[] = useState([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [files, setFiles]: string[] = useState<FileItem[]>([]);
+  const [_, setSelectedFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    hasConverted.current = false;
+    if (initialFiles.length > 0) {
+      hasConverted.current = true;
+      setFiles(initialFiles);
+    }
+  }, [initialFiles]);
 
   const handleFileSelect = (event: FileUploadHandlerEvent) => {
     const file = event.files[0];
     setSelectedFile(file);
 
     if (!name) {
-      const fileName = file?.name?.replace(/\.[^/.]+$/, "");
+      const fileName = helpers.removeExtension(file?.name);
       setName(fileName);
     }
 
@@ -56,7 +66,6 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
   }, [files]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log(files, "dari submssion");
     e.preventDefault();
 
     // Validation
@@ -81,13 +90,21 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
     }
 
     // Build FormData
+    // Handle name document
     const formData = new FormData();
     formData.append("name_doc", name.trim());
 
-    if (files && files.length > 0) {
-      files.forEach((file) => {
-        formData.append("files", file);
+    // Handle Upload Files
+    files
+      .filter((f) => !helpers.isDocumentFile(f))
+      .forEach((file) => {
+        formData.append("files", file as File);
       });
+
+    const deletedIds = initialFiles.filter((f) => !files.find((el) => helpers.isDocumentFile(el) && el.id === f.id)).map((f) => f.id);
+
+    if (deletedIds.length > 0) {
+      formData.append("deleted_file_ids", JSON.stringify(deletedIds));
     }
 
     await onSubmit(formData);
@@ -100,78 +117,120 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
     fileUploadRef.current?.clear();
   };
 
-  const getFileNameFromUrl = (url: string) => {
-    try {
-      const urlPath = new URL(url).pathname;
-      return urlPath.split("/").pop() || "Current file";
-    } catch {
-      return "Current file";
+  const handleRemoveFile = (index: number) => {
+    const newFiles = [...files];
+    newFiles.splice(index, 1);
+    setFiles(newFiles);
+  };
+
+  const displayIconFile = (extension: string) => {
+    switch (extension) {
+      case "pdf":
+        return <i className="pi pi-file-pdf text-primary text-3xl" />;
+        break;
+      case "doc":
+        return <i className="pi pi-file-word text-primary text-3xl" />;
+        break;
+      case "png" || "PNG":
+      case "jpg":
+      case "jpeg":
+        return <i className="pi pi-image text-primary text-3xl" />;
+        break;
+      default:
+        return <i className="pi pi-file text-primary text-3xl" />;
+        break;
     }
   };
+
+  const formContent = (
+    <form onSubmit={handleSubmit} className="flex flex-column gap-4">
+      {/* Document Name */}
+      {mode !== "view" && (
+        <div className="flex flex-column gap-2">
+          <label htmlFor="name_doc" className="font-semibold">
+            Document Name <span className="text-red-500">*</span>
+          </label>
+          <InputText id="name_doc" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter document name" required disabled={isLoading} className="w-full" />
+        </div>
+      )}
+
+      {/* File Upload */}
+      <div className="flex flex-column gap-2">
+        <label className="font-semibold">Upload File {mode === "create" && <span className="text-red-500">*</span>}</label>
+
+        {mode !== "view" && (
+          <FileUpload
+            ref={fileUploadRef}
+            mode="basic"
+            name="file"
+            accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
+            maxFileSize={10000000}
+            customUpload
+            onSelect={handleFileSelect}
+            auto={false}
+            chooseLabel="Choose File"
+            disabled={isLoading}
+            className="w-full"
+          />
+        )}
+
+        {files && files?.length ? (
+          <div className={`${mode !== "view" && "mt-3"}`}>
+            <div className="font-semibold mb-3">Total Files: {files?.length}</div>
+            <div
+              className="gap-2 grid p-3 border-round text-sm"
+              style={{
+                border: "1px dashed #99a1af",
+                borderRadius: "8px",
+                margin: "0 auto",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              {files?.map((file, index) => (
+                <div key={index} className="col-12 md:col-2 mb-3">
+                  <div className="flex flex-col align-items-center gap-1 mt-1">
+                    {displayIconFile(helpers.getExtension(helpers.isDocumentFile(file) ? file.filename : file.name))}
+                    <a
+                      href={helpers.isDocumentFile(file) ? file.url_doc : URL.createObjectURL(file)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`text-primary cursor-pointer hover:underline`}
+                      style={{
+                        display: "block",
+                        maxWidth: "150px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {helpers.removeExtension(helpers.isDocumentFile(file) ? file.filename : file.name)}
+                    </a>
+                    {mode !== "view" && <i className="pi pi-trash cursor-pointer" style={{ color: "red" }} onClick={() => handleRemoveFile(index)} />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Action Buttons */}
+      {mode !== "view" && (
+        <div className="flex gap-2 justify-content-end ">
+          {onCancel && <Button type="button" label="Cancel" icon="pi pi-times" severity="secondary" onClick={onCancel} disabled={isLoading} />}
+
+          <Button type="button" label="Reset" icon="pi pi-refresh" severity="warning" onClick={handleReset} disabled={isLoading} outlined />
+          <Button type="submit" label={mode === "create" ? "Upload" : "Update"} icon={isLoading ? "pi pi-spin pi-spinner" : "pi pi-upload"} severity="success" loading={isLoading} disabled={isLoading} />
+        </div>
+      )}
+    </form>
+  );
 
   return (
     <>
       <Toast ref={toast} />
-      <Card>
-        <form onSubmit={handleSubmit} className="flex flex-column gap-4">
-          {/* Document Name */}
-          <div className="flex flex-column gap-2">
-            <label htmlFor="name_doc" className="font-semibold">
-              Document Name <span className="text-red-500">*</span>
-            </label>
-            <InputText id="name_doc" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter document name" required disabled={isLoading} className="w-full" />
-          </div>
-
-          {/* File Upload */}
-          <div className="flex flex-column gap-2">
-            <label className="font-semibold">
-              {mode === "create" ? "Upload File" : "Replace File"} {mode === "create" && <span className="text-red-500">*</span>}
-            </label>
-
-            {/* Show existing file in update mode: Will be Updated because it can be bulk */}
-            {mode === "update" && doc_url && !selectedFile && (
-              <div className="p-3 border-300 border-round mb-2">
-                <small className="text-600">
-                  <i className="pi pi-file mr-2"></i>
-                  Current: {getFileNameFromUrl(doc_url)}
-                </small>
-              </div>
-            )}
-
-            <FileUpload
-              ref={fileUploadRef}
-              mode="basic"
-              name="file"
-              accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
-              maxFileSize={10000000}
-              customUpload
-              onSelect={handleFileSelect}
-              auto={false}
-              chooseLabel={selectedFile ? "Change File" : mode === "update" ? "Replace File" : "Choose File"}
-              disabled={isLoading}
-              className="w-full"
-            />
-
-            <div className="mt-3 flex flex-column gap-2">
-              {files && files.length > 0
-                ? files.map((url, index) => (
-                    <small key={index} className="text-green-600">
-                      <i className="pi pi-check-circle mr-1"></i>
-                      {url?.name} ({(url?.size / 1024 / 1024).toFixed(2)} MB)
-                    </small>
-                  ))
-                : null}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 justify-content-end">
-            {onCancel && <Button type="button" label="Cancel" icon="pi pi-times" severity="secondary" onClick={onCancel} disabled={isLoading} />}
-            <Button type="button" label="Reset" icon="pi pi-refresh" severity="warning" onClick={handleReset} disabled={isLoading} outlined />
-            <Button type="submit" label={mode === "create" ? "Upload" : "Update"} icon={isLoading ? "pi pi-spin pi-spinner" : "pi pi-upload"} severity="success" loading={isLoading} disabled={isLoading} />
-          </div>
-        </form>
-      </Card>
+      {mode === "view" ? formContent : <Card>{formContent}</Card>}
     </>
   );
 };

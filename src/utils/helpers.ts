@@ -77,3 +77,9 @@ export const getSeverity = (status: DocumentStatusEnum) => {
       return "secondary";
   }
 };
+
+export const removeExtension = (filename: string) => filename?.replace(/\.[^/.]+$/, "");
+
+export const getExtension = (filename: string) => filename?.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2);
+
+export const isDocumentFile = (file: FileItem): file is DocumentFile => "url_doc" in file;

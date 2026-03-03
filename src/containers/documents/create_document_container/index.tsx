@@ -40,14 +40,14 @@ export default function CreateDocumentContainer() {
   };
 
   return (
-    <div className="p-4 flex flex-col align-items-center justify-content-center min-h-screen">
+    <div className="p-4">
       <Toast ref={toast} />
 
       <div className="flex align-items-center justify-content-between mb-4">
-        <h1 className="text-3xl font-bold">Upload New Documents</h1>
+        <h1 className="text-3xl font-bold">Upload New Files</h1>
       </div>
 
-      <div className="max-w-3xl">
+      <div className="mx-auto">
         <UploadFormsComponent mode="create" onSubmit={handleSubmit} isLoading={isLoading} onCancel={handleCancel} />
       </div>
     </div>

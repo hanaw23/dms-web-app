@@ -73,6 +73,7 @@ interface DeleteDocumentResponseData extends BaseResponse {
   message?: string;
 }
 
+type FileItem = File | DocumentFile;
 type DocumentStatus = DocumentStatusEnum;
 type CreateDocumentResponse = CreateDocumentResponseData;
 type GetDocumentResponse = GetDocumentResponseData;

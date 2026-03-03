@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { InputText } from "primereact/inputtext";
 import { FileUpload, FileUploadHandlerEvent } from "primereact/fileupload";
 import { Button } from "primereact/button";
@@ -20,16 +20,22 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
   const toast = useRef<Toast>(null);
   const fileUploadRef = useRef<FileUpload>(null);
   const [name, setName] = useState(initialName);
+  const [countFiles, setCountFiles]: number = useState(0);
+  const [files, setFiles]: string[] = useState([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleFileSelect = (event: FileUploadHandlerEvent) => {
     const file = event.files[0];
     setSelectedFile(file);
 
-    if (!name && file) {
-      const fileName = file.name.replace(/\.[^/.]+$/, "");
+    if (!name) {
+      const fileName = file?.name?.replace(/\.[^/.]+$/, "");
       setName(fileName);
     }
+
+    setFiles((prev) => {
+      return [...prev, file];
+    });
 
     toast.current?.show({
       severity: "info",
@@ -39,7 +45,18 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
     });
   };
 
+  useEffect(() => {
+    if (countFiles !== files?.length) {
+      fileUploadRef.current?.clear();
+      setSelectedFile(null);
+      setCountFiles((prev) => {
+        return (prev += 1);
+      });
+    }
+  }, [files]);
+
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log(files, "dari submssion");
     e.preventDefault();
 
     // Validation
@@ -53,7 +70,7 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
       return;
     }
 
-    if (mode === "create" && !selectedFile) {
+    if (mode === "create" && files.length === 0) {
       toast.current?.show({
         severity: "warn",
         summary: "Validation Error",
@@ -67,8 +84,10 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
     const formData = new FormData();
     formData.append("name_doc", name.trim());
 
-    if (selectedFile) {
-      formData.append("file", selectedFile);
+    if (files && files.length > 0) {
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
     }
 
     await onSubmit(formData);
@@ -77,10 +96,10 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
   const handleReset = () => {
     setName(initialName);
     setSelectedFile(null);
+    setFiles([]);
     fileUploadRef.current?.clear();
   };
 
-  // Helper to extract filename from URL
   const getFileNameFromUrl = (url: string) => {
     try {
       const urlPath = new URL(url).pathname;
@@ -109,9 +128,9 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
               {mode === "create" ? "Upload File" : "Replace File"} {mode === "create" && <span className="text-red-500">*</span>}
             </label>
 
-            {/* Show existing file in update mode */}
+            {/* Show existing file in update mode: Will be Updated because it can be bulk */}
             {mode === "update" && doc_url && !selectedFile && (
-              <div className="p-3 border-1 border-300 border-round mb-2">
+              <div className="p-3 border-300 border-round mb-2">
                 <small className="text-600">
                   <i className="pi pi-file mr-2"></i>
                   Current: {getFileNameFromUrl(doc_url)}
@@ -132,12 +151,17 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", doc_url = "",
               disabled={isLoading}
               className="w-full"
             />
-            {selectedFile && (
-              <small className="text-green-600">
-                <i className="pi pi-check-circle mr-1"></i>
-                New file: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </small>
-            )}
+
+            <div className="mt-3 flex flex-column gap-2">
+              {files && files.length > 0
+                ? files.map((url, index) => (
+                    <small key={index} className="text-green-600">
+                      <i className="pi pi-check-circle mr-1"></i>
+                      {url?.name} ({(url?.size / 1024 / 1024).toFixed(2)} MB)
+                    </small>
+                  ))
+                : null}
+            </div>
           </div>
 
           {/* Action Buttons */}

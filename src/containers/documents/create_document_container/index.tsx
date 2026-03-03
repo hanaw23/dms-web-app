@@ -19,14 +19,12 @@ export default function CreateDocumentContainer() {
   const handleSubmit = async (formData: FormData) => {
     try {
       const result = await postCreateDocument(formData).unwrap();
-
       toast.current?.show({
         severity: "success",
         summary: "Success",
-        detail: `Document ${result?.data?.name_doc} uploaded successfully`,
+        detail: `Documents ${result?.data?.name_doc} uploaded successfully`,
         life: 3000,
       });
-
       setTimeout(() => {
         handleCancel();
       }, 1000);
@@ -34,10 +32,9 @@ export default function CreateDocumentContainer() {
       toast.current?.show({
         severity: "error",
         summary: "Upload Failed",
-        detail: error?.data?.message || "Failed to upload document. Please try again.",
+        detail: error?.data?.message || "Failed to upload documents. Please try again.",
         life: 4000,
       });
-
       throw error;
     }
   };
@@ -47,7 +44,7 @@ export default function CreateDocumentContainer() {
       <Toast ref={toast} />
 
       <div className="flex align-items-center justify-content-between mb-4">
-        <h1 className="text-3xl font-bold">Upload New Document</h1>
+        <h1 className="text-3xl font-bold">Upload New Documents</h1>
       </div>
 
       <div className="max-w-3xl">

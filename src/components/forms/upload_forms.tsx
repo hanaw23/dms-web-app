@@ -26,6 +26,10 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
   const [files, setFiles]: string[] = useState<FileItem[]>([]);
   const [_, setSelectedFile] = useState<File | null>(null);
 
+  const isViewMode = mode === "view";
+  const areFilesExist = files && files?.length > 0;
+  const checkIsDocumentFileType = (file: FileItem) => helpers.isDocumentFile(file);
+
   useEffect(() => {
     hasConverted.current = false;
     if (initialFiles.length > 0) {
@@ -79,7 +83,7 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
       return;
     }
 
-    if (mode === "create" && files.length === 0) {
+    if (files.length === 0) {
       toast.current?.show({
         severity: "warn",
         summary: "Validation Error",
@@ -101,6 +105,7 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
         formData.append("files", file as File);
       });
 
+    // handle if there're previous files removed (EDIT)
     const deletedIds = initialFiles.filter((f) => !files.find((el) => helpers.isDocumentFile(el) && el.id === f.id)).map((f) => f.id);
 
     if (deletedIds.length > 0) {
@@ -145,7 +150,7 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
   const formContent = (
     <form onSubmit={handleSubmit} className="flex flex-column gap-4">
       {/* Document Name */}
-      {mode !== "view" && (
+      {!isViewMode && (
         <div className="flex flex-column gap-2">
           <label htmlFor="name_doc" className="font-semibold">
             Document Name <span className="text-red-500">*</span>
@@ -156,9 +161,13 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
 
       {/* File Upload */}
       <div className="flex flex-column gap-2">
-        <label className="font-semibold">Upload File {mode === "create" && <span className="text-red-500">*</span>}</label>
+        {!isViewMode && (
+          <label className="font-semibold">
+            Upload File <span className="text-red-500">*</span>
+          </label>
+        )}
 
-        {mode !== "view" && (
+        {!isViewMode && (
           <FileUpload
             ref={fileUploadRef}
             mode="basic"
@@ -174,8 +183,8 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
           />
         )}
 
-        {files && files?.length ? (
-          <div className={`${mode !== "view" && "mt-3"}`}>
+        {areFilesExist ? (
+          <div className={`${!isViewMode && "mt-3"}`}>
             <div className="font-semibold mb-3">Total Files: {files?.length}</div>
             <div
               className="gap-2 grid p-3 border-round text-sm"
@@ -187,39 +196,45 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
                 alignItems: "center",
               }}
             >
-              {files?.map((file, index) => (
-                <div key={index} className="col-12 md:col-2 mb-3">
-                  <div className="flex flex-col align-items-center gap-1 mt-1">
-                    {displayIconFile(helpers.getExtension(helpers.isDocumentFile(file) ? file.filename : file.name))}
-                    <a
-                      href={helpers.isDocumentFile(file) ? file.url_doc : URL.createObjectURL(file)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`text-primary cursor-pointer hover:underline`}
-                      style={{
-                        display: "block",
-                        maxWidth: "150px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {helpers.removeExtension(helpers.isDocumentFile(file) ? file.filename : file.name)}
-                    </a>
-                    {mode !== "view" && <i className="pi pi-trash cursor-pointer" style={{ color: "red" }} onClick={() => handleRemoveFile(index)} />}
+              {files?.map((file, index) => {
+                const fileTypeName = checkIsDocumentFileType(file) ? file.filename : file.name;
+                const fileExtention = helpers.getExtension(fileTypeName);
+                const fileUrl = checkIsDocumentFileType(file) ? file.url_doc : URL.createObjectURL(file);
+                const fileName = helpers.removeExtension(fileTypeName);
+
+                return (
+                  <div key={index} className="col-12 md:col-2 mb-3">
+                    <div className="flex flex-col align-items-center gap-1 mt-1">
+                      {displayIconFile(fileExtention)}
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-primary cursor-pointer hover:underline`}
+                        style={{
+                          display: "block",
+                          maxWidth: "150px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {fileName}
+                      </a>
+                      {!isViewMode && <i className="pi pi-trash cursor-pointer" style={{ color: "red" }} onClick={() => handleRemoveFile(index)} />}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : null}
       </div>
 
       {/* Action Buttons */}
-      {mode !== "view" && (
+      {!isViewMode && (
         <div className="flex gap-2 justify-content-end ">
           {onCancel && <Button type="button" label="Cancel" icon="pi pi-times" severity="secondary" onClick={onCancel} disabled={isLoading} />}
-
           <Button type="button" label="Reset" icon="pi pi-refresh" severity="warning" onClick={handleReset} disabled={isLoading} outlined />
           <Button type="submit" label={mode === "create" ? "Upload" : "Update"} icon={isLoading ? "pi pi-spin pi-spinner" : "pi pi-upload"} severity="success" loading={isLoading} disabled={isLoading} />
         </div>
@@ -230,7 +245,7 @@ const UploadFormsComponent = ({ mode = "create", initialName = "", initialFiles 
   return (
     <>
       <Toast ref={toast} />
-      {mode === "view" ? formContent : <Card>{formContent}</Card>}
+      {isViewMode ? formContent : <Card>{formContent}</Card>}
     </>
   );
 };

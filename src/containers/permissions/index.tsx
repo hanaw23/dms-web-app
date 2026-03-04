@@ -133,6 +133,8 @@ const PermissionsContainer = () => {
     { label: "Reject", value: PermissionStatusEnum.REJECTED },
   ];
 
+  const isDisabledUpdatePermission = selectedRequest?.status_permission === PermissionStatusEnum.REJECTED || selectedRequest?.status_permission === PermissionStatusEnum.APPROVED;
+
   return (
     <div className="card">
       <Toast ref={toast} />
@@ -194,24 +196,43 @@ const PermissionsContainer = () => {
               <p className="mt-2">{selectedRequest.message || "-"}</p>
             </div>
 
-            <div className="flex flex-column gap-2">
-              <label htmlFor="status" className="font-semibold">
-                Decision <span className="text-red-500">*</span>
-              </label>
-              <Dropdown id="status" value={reviewStatus} onChange={(e) => setReviewStatus(e.value)} options={statusOptions} placeholder="Select decision" className="w-full" />
-            </div>
+            {isDisabledUpdatePermission && (
+              <>
+                <div>
+                  <strong>Reviewer Message:</strong>
+                  <p className="mt-2">{selectedRequest.admin_note}</p>
+                </div>
+                <div>
+                  <strong>Reviewed At:</strong>
+                  <p className="mt-2">{dayjs(selectedRequest.Reviewed_at).format("DD MMM YYYY, hh:mm A")}</p>
+                </div>
+              </>
+            )}
 
-            <div className="flex flex-column gap-2">
-              <label htmlFor="admin_note" className="font-semibold">
-                Admin Note (Optional)
-              </label>
-              <InputTextarea id="admin_note" value={adminNote} onChange={(e) => setAdminNote(e.target.value)} rows={3} placeholder="Add note for user..." className="w-full" />
-            </div>
+            {!isDisabledUpdatePermission && (
+              <>
+                <div className="flex flex-column gap-2">
+                  <label htmlFor="status" className="font-semibold">
+                    Decision <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown id="status" value={reviewStatus} onChange={(e) => setReviewStatus(e.value)} options={statusOptions} placeholder="Select decision" className="w-full" />
+                </div>
 
-            <div className="flex gap-2 justify-content-end mt-3">
-              <Button label="Cancel" icon="pi pi-times" severity="secondary" onClick={() => setReviewDialogVisible(false)} outlined />
-              <Button label="Submit" icon="pi pi-check" severity="success" onClick={handleSubmitReview} loading={isLoadingUpdateStatus} />
-            </div>
+                <div className="flex flex-column gap-2">
+                  <label htmlFor="admin_note" className="font-semibold">
+                    Admin Note (Optional)
+                  </label>
+                  <InputTextarea id="admin_note" value={adminNote} onChange={(e) => setAdminNote(e.target.value)} rows={3} placeholder="Add note for user..." className="w-full" />
+                </div>
+              </>
+            )}
+
+            {isDisabledUpdatePermission ? null : (
+              <div className="flex gap-2 justify-content-end mt-3">
+                <Button label="Cancel" icon="pi pi-times" severity="secondary" onClick={() => setReviewDialogVisible(false)} outlined />
+                <Button label="Submit" icon="pi pi-check" severity="success" onClick={handleSubmitReview} loading={isLoadingUpdateStatus} />
+              </div>
+            )}
           </div>
         )}
       </Dialog>

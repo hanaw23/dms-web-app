@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useMemo } from "react";
 import dayjs from "dayjs";
 import { useGetAllDocumentsQuery, useDeleteDocumentMutation, usePatchUpdateDocumentStatusMutation } from "@dms/services/document_services";
+import { useGetAllAdminsQuery } from "@dms/services/auth_services";
+import { usePostCreatePermissionRequestMutation } from "@dms/services/permission_services";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
@@ -18,14 +20,15 @@ import { PageNames } from "@dms/constants";
 
 export default function DocumentsContainer() {
   const router = useRouter();
+  const permissionTypeRef = useRef<string | null>(null);
+  const permissionAdminRef = useRef<number | null>(null);
   const toast = useRef<Toast>(null);
   const user = localStorage.getItem("user");
   const role_user = JSON.parse(user)?.role;
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [permissionType, setPermissionType] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
 
   // Debounced search function
   const debouncedSearch = useMemo(
@@ -44,7 +47,7 @@ export default function DocumentsContainer() {
     debouncedSearch(value);
   };
 
-  // Fetch documents
+  // Fetch
   const { data, isLoading, isFetching, refetch } = useGetAllDocumentsQuery({
     search,
     page,
@@ -56,6 +59,9 @@ export default function DocumentsContainer() {
 
   // Update status document mutation
   const [patchUpdateDocumentStatus, { isLoading: isUpdatingStatus }] = usePatchUpdateDocumentStatusMutation();
+
+  // Create Permission Request mutation
+  const [PostCreatePermissionRequest, { isLoading: isLoadingPermission }] = usePostCreatePermissionRequestMutation();
 
   // Status badge template
   const statusBodyTemplate = (rowData: Document) => {
@@ -79,6 +85,137 @@ export default function DocumentsContainer() {
 
   const TimeTemplate = (date: string | Date) => {
     return <div className="font-semibold text-primary text-sm">{dayjs(date).format("DD MMM YYYY, hh:mm A")}</div>;
+  };
+
+  // Permission dialog
+  const PermissionDialogContent = ({
+    permissionOptions,
+    onChangePermissionType,
+    onChangeAdmin,
+  }: {
+    permissionOptions: { label: string; value: string }[];
+    onChangePermissionType: (val: string) => void;
+    onChangeAdmin: (val: string) => void;
+  }) => {
+    const [selectedPermissionType, setSelectedPermissionType] = useState<string | null>(null);
+    const [selectedAdmin, setSelectedAdmin] = useState<string | null>(null);
+    const [searchInputAdmin, setSearchInputAdmin] = useState<string>("");
+    const [searchAdmin, setSearchAdmin] = useState<string>("");
+    const [pageAdmin, _] = useState<number>(1);
+    const limitAdmin = 10;
+    const showDropdown = searchInputAdmin.length > 0 && !selectedAdmin;
+
+    // Fetch Admins
+    const { data: admins, isLoading: isLoadingAdmins } = useGetAllAdminsQuery({
+      search: searchAdmin,
+      page: pageAdmin,
+      limit: limitAdmin,
+    });
+
+    // Debounce Admin
+    const debouncedSearchAdmin = useMemo(
+      () =>
+        helpers.debounce((value: string) => {
+          setSearchAdmin(value);
+        }, 500),
+      [],
+    );
+
+    const handleSearchChangeAdmin = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchInputAdmin(value);
+      debouncedSearchAdmin(value);
+    };
+
+    const adminOptions = useMemo(
+      () =>
+        admins?.data?.map((admin) => ({
+          label: admin.name,
+          value: admin.id,
+        })) ?? [],
+      [admins],
+    );
+
+    const handleSelectAdmin = (admin: { label: string; value: string }) => {
+      setSelectedAdmin(admin.value);
+      setSearchInputAdmin(admin.label);
+      onChangeAdmin(admin.value);
+    };
+
+    return (
+      <div className="mb-4 w-full">
+        {/* Select Permission */}
+        <div className="text-left mb-4">
+          <div className="w-full">Permission Type *</div>
+          <Dropdown
+            value={selectedPermissionType}
+            onChange={(e: DropdownChangeEvent) => {
+              setSelectedPermissionType(e.value);
+              onChangePermissionType(e.value);
+            }}
+            options={permissionOptions}
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select permission type"
+            className="w-full"
+            checkmark={true}
+            highlightOnSelect={true}
+            pt={{
+              input: { style: { textAlign: "left" } },
+            }}
+          />
+        </div>
+        {/* Admin Search */}
+        <div className="text-left mb-4 relative">
+          <div className="w-full">Admin To Be Requested *</div>
+          <InputText
+            value={searchInputAdmin}
+            onChange={(e) => {
+              if (selectedAdmin) setSelectedAdmin(null);
+              handleSearchChangeAdmin(e);
+            }}
+            placeholder="Search admin..."
+            className="w-full!"
+          />
+
+          {showDropdown && (
+            <div className="absolute z-50 w-full bg-white border border-gray-200 rounded shadow-md mt-1 max-h-52 overflow-y-auto">
+              {isLoadingAdmins ? (
+                <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
+              ) : adminOptions.length === 0 ? (
+                <div className="p-3 text-center text-gray-500 text-sm">No admins found</div>
+              ) : (
+                adminOptions.map((admin) => (
+                  <div
+                    key={admin.value}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                    onMouseDown={(e) => e.preventDefault()} // cegah input blur sebelum onClick
+                    onClick={() => handleSelectAdmin(admin)}
+                  >
+                    {admin.label}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {selectedAdmin && (
+            <div className="mt-2 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded px-3 py-1 w-fit text-sm text-blue-700">
+              <span>{searchInputAdmin}</span>
+              <button
+                onClick={() => {
+                  setSelectedAdmin(null);
+                  setSearchInputAdmin("");
+                }}
+                className="text-blue-400 hover:text-blue-700 font-bold"
+              >
+                <i className="pi pi-times text-red-500! text-sm!" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Actions template
@@ -110,6 +247,7 @@ export default function DocumentsContainer() {
       });
     };
 
+    // Handle Permission Request : USER ROLE
     const permissionOptions = [
       { label: "Replace Document", value: "replace" },
       { label: "Remove Document", value: "remove" },
@@ -123,17 +261,29 @@ export default function DocumentsContainer() {
       return true;
     });
 
+    const resetRef = () => {
+      permissionTypeRef.current = null;
+      permissionAdminRef.current = null;
+    };
+
     const handleRequestPermission = () => {
+      resetRef();
       confirmDialog({
+        style: { width: "350px" },
         message: (
-          <div className="flex flex-column gap-3">
-            <p>Select permission type you want to request:</p>
-            <Dropdown value={permissionType} onChange={(e) => setPermissionType(e.value)} options={permissionOptions} placeholder="Select permission type" className="w-full" />
-          </div>
+          <PermissionDialogContent
+            permissionOptions={permissionOptions}
+            onChangePermissionType={(val) => {
+              permissionTypeRef.current = val;
+            }}
+            onChangeAdmin={(val) => {
+              permissionAdminRef.current = val;
+            }}
+          />
         ),
         header: "Request Permission",
         accept: async () => {
-          if (!permissionType) {
+          if (!permissionTypeRef.current) {
             toast.current?.show({
               severity: "warn",
               summary: "Warning",
@@ -143,28 +293,73 @@ export default function DocumentsContainer() {
             return;
           }
 
+          if (!permissionAdminRef.current) {
+            toast.current?.show({
+              severity: "warn",
+              summary: "Warning",
+              detail: "Please select admin to be requested",
+              life: 3000,
+            });
+            return;
+          }
+
           try {
-            let newStatus = "";
-            if (isUpdatingStatus === "replace") {
+            const requestTypeCapitalize = permissionTypeRef.current.toUpperCase();
+            let newStatus: string = "";
+            let message: string = "";
+            if (permissionTypeRef.current === "replace") {
               newStatus = "pending_replace";
-            } else if (isUpdatingStatus === "remove") {
+              message = "Request Replace Document";
+            } else if (permissionTypeRef.current === "remove") {
               newStatus = "pending_remove";
+              message = "Request Remove Document";
             }
 
-            await patchUpdateDocumentStatus({
+            // Ubah status dokumen Dulu Jadi Pending
+            const resultUpdateStatusDoc = await patchUpdateDocumentStatus({
               id: rowData.id,
               body: {
                 status: newStatus,
               },
             }).unwrap();
-            toast.current?.show({
-              severity: "success",
-              summary: "Success",
-              detail: `Permission request for ${permissionType} submitted successfully`,
-              life: 3000,
-            });
+            if (resultUpdateStatusDoc?.data && !isUpdatingStatus) {
+              // Request permission dari USER ke ADMIN ROLE
+              const bodyRequestPermission = {
+                document_id: rowData.id,
+                admin_id: permissionAdminRef.current,
+                request_type: requestTypeCapitalize,
+                message: message,
+              };
+              const resultPermission = await PostCreatePermissionRequest({
+                ...bodyRequestPermission,
+              }).unwrap();
+
+              if (!resultPermission?.data && !isLoadingPermission) {
+                toast.current?.show({
+                  severity: "error",
+                  summary: "Error",
+                  detail: "Failed to request permission",
+                  life: 3000,
+                });
+                return;
+              } else {
+                toast.current?.show({
+                  severity: "success",
+                  summary: "Success",
+                  detail: `Permission request for ${requestTypeCapitalize} submitted successfully`,
+                  life: 3000,
+                });
+              }
+            } else {
+              toast.current?.show({
+                severity: "error",
+                summary: "Error",
+                detail: "Failed to update document status",
+                life: 3000,
+              });
+            }
             refetch();
-            setPermissionType(null);
+            resetRef();
           } catch (error) {
             toast.current?.show({
               severity: "error",
@@ -172,10 +367,11 @@ export default function DocumentsContainer() {
               detail: "Failed to submit permission request",
               life: 3000,
             });
+            resetRef();
           }
         },
         reject: () => {
-          setPermissionType(null);
+          resetRef();
         },
       });
     };

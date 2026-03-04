@@ -63,7 +63,7 @@ const PermissionsContainer = () => {
 
     try {
       const res = await patchUpdatePermissionRequest({
-        id: selectedRequest.id,
+        id: selectedRequest?.id,
         body: {
           status_permission: reviewStatus,
           admin_note: adminNote || undefined,
@@ -79,7 +79,7 @@ const PermissionsContainer = () => {
         }
 
         await patchUpdateDocumentStatus({
-          id: res?.data?.document_id,
+          id: res?.data?.request?.document_id,
           body: {
             status: status,
           },

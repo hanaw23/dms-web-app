@@ -93,9 +93,9 @@ export const permissionServices = createApi({
     }),
 
     // Update permission request (approve/reject by admin)
-    patchUpdatePermissionRequest: builder.mutation<UpdatePermissionRequestResponse, { id: number | string; body: UpdatePermissionRequest }>({
+    patchUpdatePermissionRequest: builder.mutation<UpdatePermissionRequestResponse, { id: number; body: UpdatePermissionRequest }>({
       query: ({ id, body }) => ({
-        url: PERMISSION_URL_PATH.permission_by_id(Number(id)),
+        url: PERMISSION_URL_PATH.permission_by_id(id),
         method: "PATCH",
         body,
       }),
